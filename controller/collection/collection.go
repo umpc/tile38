@@ -49,7 +49,7 @@ func (i *itemT) Point() (x, y, z float64) {
 type Row struct {
 	Id     string    `json:"id"`
 	Obj    []byte    `json:"obj"`
-	Values []float64 `json:"field_values"`
+	Values []float64 `json:"values"`
 }
 
 type RowContainer struct {
