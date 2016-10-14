@@ -3,8 +3,8 @@ package geojson
 import (
 	"bytes"
 	"strconv"
+	"math"
 
-	"github.com/tidwall/tile38/geojson/geo"
 	"github.com/tidwall/tile38/geojson/poly"
 )
 
@@ -173,12 +173,91 @@ func (b BBox) Sparse(amount byte) []BBox {
 
 // BBoxesFromCenter calculates the bounding box surrounding a circle.
 func BBoxesFromCenter(lat, lon, meters float64) (outer BBox) {
-	outer.Max.Y, _ = geo.DestinationPoint(lat, lon, meters, 0)
-	outer.Min.Y, _ = geo.DestinationPoint(lat, lon, meters, 180)
-	_, outer.Min.X = geo.DestinationPoint(lat, lon, meters, 270)
-	_, outer.Max.X = geo.DestinationPoint(lat, lon, meters, 90)
-	if outer.Min.X > outer.Max.X {
-		outer.Min.X = -(360 - outer.Min.X)
+
+	outer.Min.Y, outer.Min.X, outer.Max.Y, outer.Max.X = BBoxBounds(lat, lon, meters)
+	if outer.Min.X == outer.Max.X {
+		switch outer.Min.X {
+		case -180:
+			outer.Max.X = 180
+		case 180:
+			outer.Min.X = -180
+		}
 	}
+
 	return outer
+}
+
+func BBoxBounds(lat, lon, meters float64) (latMin, lonMin, latMax, lonMax float64) {
+
+	// see http://janmatuschek.de/LatitudeLongitudeBoundingCoordinates#Latitude
+	lat = toRadians(lat)
+	lon = toRadians(lon)
+
+	r := meters / earthRadius // angular radius
+
+	latMin = lat - r
+	latMax = lat + r
+
+	latT := math.Asin(math.Sin(lat) / math.Cos(r))
+	lonΔ := math.Acos(( math.Cos(r) - math.Sin(latT) * math.Sin(lat)) / (math.Cos(latT) * math.Cos(lat) ))
+
+	lonMin = lon - lonΔ
+	lonMax = lon + lonΔ
+
+	// Adjust for north poll
+	if latMax > math.Pi/2 {
+		lonMin = -math.Pi
+		latMax = math.Pi/2
+		lonMax = math.Pi
+	}
+
+	// Adjust for south poll
+	if latMin < -math.Pi/2 {
+		latMin = -math.Pi/2
+		lonMin = -math.Pi
+		lonMax = math.Pi
+	}
+
+	// Adjust for wraparound. Remove this if the commented-out condition below this block is added.
+	if lonMin < -math.Pi || lonMax > math.Pi {
+		lonMin = -math.Pi
+		lonMax = math.Pi
+	}
+
+/*
+	// Consider splitting area into two bboxes, using the below checks, and erasing above block for performance. See http://janmatuschek.de/LatitudeLongitudeBoundingCoordinates#PolesAnd180thMeridian
+
+	// Adjust for wraparound if minimum longitude is less than -180 degrees.
+	if lonMin < -math.Pi {
+// box 1:
+		latMin = latMin
+		latMax = latMax
+		lonMin += 2*math.Pi
+		lonMax = math.Pi
+// box 2:
+		latMin = latMin
+		latMax = latMax
+		lonMin = -math.Pi
+		lonMax = lonMax
+	}
+
+	// Adjust for wraparound if maximum longitude is greater than 180 degrees.
+	if lonMax > math.Pi {
+// box 1:
+		latMin = latMin
+		latMax = latMax
+		lonMin = lonMin
+		lonMax = -math.Pi
+// box 2:
+		latMin = latMin
+		latMax = latMax
+		lonMin = -math.Pi
+		lonMax -= 2*math.Pi
+	}
+*/
+
+	lonMin = math.Mod(lonMin+3*math.Pi, 2*math.Pi) - math.Pi // normalise to -180..+180°
+	lonMax = math.Mod(lonMax+3*math.Pi, 2*math.Pi) - math.Pi
+
+	return toDegrees(latMin), toDegrees(lonMin), toDegrees(latMax), toDegrees(lonMax)
 }
