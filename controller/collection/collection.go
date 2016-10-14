@@ -60,7 +60,7 @@ type File struct {
 func (c *Collection) MarshalJSON() ([]byte, error) {
 
 	colCount := c.Count()
-	fileJSON := File{
+	file := File{
 		Rows:   make([]Row, colCount),
 		Fields: c.FieldArr(),
 	}
@@ -72,7 +72,7 @@ func (c *Collection) MarshalJSON() ([]byte, error) {
 			if i < colCount {
 				objBytes, _ := obj.MarshalJSON()
 
-				fileJSON.Rows[i] = Row{
+				file.Rows[i] = Row{
 					Id: id,
 					Obj: objBytes,
 					Values: values,
@@ -84,7 +84,7 @@ func (c *Collection) MarshalJSON() ([]byte, error) {
 		},
 	)
 
-    return json.Marshal(fileJSON)
+    return json.Marshal(file)
 }
 
 func (c *Collection) UnmarshalJSON(b []byte) error {
@@ -93,19 +93,19 @@ func (c *Collection) UnmarshalJSON(b []byte) error {
 		return errors.New("No bytes were input")
 	}
 
-	fileJSON := File{}
-	fileJSON.Rows = make([]Row, 0)
+	file := File{}
+	file.Rows = make([]Row, 0)
 
-	if err := json.Unmarshal(b, &fileJSON); err != nil {
+	if err := json.Unmarshal(b, &file); err != nil {
 		return err
 	}
 
-	for i := range fileJSON.Rows {
-		obj, err := geojson.ObjectAuto(fileJSON.Rows[i].Obj)
+	for i := range file.Rows {
+		obj, err := geojson.ObjectAuto(file.Rows[i].Obj)
 		if err != nil {
 			return err
 		}
-		c.ReplaceOrInsert(fileJSON.Rows[i].Id, obj, fileJSON.Fields, fileJSON.Rows[i].Values)
+		c.ReplaceOrInsert(file.Rows[i].Id, obj, file.Fields, file.Rows[i].Values)
 	}
 
     return nil
