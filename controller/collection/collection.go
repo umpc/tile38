@@ -47,25 +47,27 @@ func (i *itemT) Point() (x, y, z float64) {
 }
 
 type Row struct {
-	Id          string     `json:"id"`
-	Obj         []byte     `json:"obj"`
-	FieldValues []float64  `json:"field_values"`
+	Id     string    `json:"id"`
+	Obj    []byte    `json:"obj"`
+	Values []float64 `json:"field_values"`
 }
 
 type RowContainer struct {
-	Rows []Row
+	Rows   []Row    `json:"rows"`
+	Fields []string `json:"fields"`
 }
 
 func (c *Collection) MarshalJSON() ([]byte, error) {
 
 	colCount := c.Count()
-	fileJSON := RowContainer{}
-
-	fileJSON.Rows = make([]Row, colCount)
+	fileJSON := RowContainer{
+		Rows:   make([]Row, colCount),
+		Fields: c.FieldArr(),
+	}
 
 	var i int
 	c.Scan(0, false,
-		func(id string, obj geojson.Object, fields []float64) bool {
+		func(id string, obj geojson.Object, values []float64) bool {
 			// Bounds check for safety
 			if i < colCount {
 				objBytes, _ := obj.MarshalJSON()
@@ -73,7 +75,7 @@ func (c *Collection) MarshalJSON() ([]byte, error) {
 				fileJSON.Rows[i] = Row{
 					Id: id,
 					Obj: objBytes,
-					FieldValues: fields,
+					Values: values,
 				}
 				i++
 				return true
@@ -82,7 +84,7 @@ func (c *Collection) MarshalJSON() ([]byte, error) {
 		},
 	)
 
-    return json.Marshal(fileJSON)
+	return json.Marshal(fileJSON)
 }
 
 func (c *Collection) UnmarshalJSON(b []byte) error {
@@ -103,10 +105,10 @@ func (c *Collection) UnmarshalJSON(b []byte) error {
 		if err != nil {
 			return err
 		}
-		c.ReplaceOrInsert(fileJSON.Rows[i].Id, obj, nil, fileJSON.Rows[i].FieldValues)
+		c.ReplaceOrInsert(fileJSON.Rows[i].Id, obj, fileJSON.Fields, fileJSON.Rows[i].Values)
 	}
 
-    return nil
+	return nil
 }
 
 // Collection represents a collection of geojson objects.
