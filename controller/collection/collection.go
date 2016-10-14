@@ -1,6 +1,9 @@
 package collection
 
 import (
+	"errors"
+	"encoding/json"
+
 	"github.com/tidwall/btree"
 	"github.com/tidwall/tile38/geojson"
 	"github.com/tidwall/tile38/index"
