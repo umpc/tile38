@@ -73,8 +73,8 @@ func (c *Collection) MarshalJSON() ([]byte, error) {
 				objBytes, _ := obj.MarshalJSON()
 
 				file.Rows[i] = Row{
-					Id: id,
-					Obj: objBytes,
+					Id:     id,
+					Obj:    objBytes,
 					Values: values,
 				}
 				i++
