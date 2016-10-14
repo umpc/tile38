@@ -46,6 +46,69 @@ func (i *itemT) Point() (x, y, z float64) {
 	return
 }
 
+type Row struct {
+	Id          string     `json:"id"`
+	Obj         []byte     `json:"obj"`
+	FieldValues []float64  `json:"field_values"`
+}
+
+type RowContainer struct {
+	Rows []Row
+}
+
+func (c *Collection) MarshalJSON() ([]byte, error) {
+
+	colCount := c.Count()
+	fileJSON := RowContainer{}
+
+	fileJSON.Rows = make([]Row, colCount)
+
+	var i int
+	c.Scan(0, false,
+		func(id string, obj geojson.Object, fields []float64) bool {
+			// Bounds check for safety
+			if i < colCount {
+				objBytes, _ := obj.MarshalJSON()
+
+				fileJSON.Rows[i] = Row{
+					Id: id,
+					Obj: objBytes,
+					FieldValues: fields,
+				}
+				i++
+				return true
+			}
+			return false
+		},
+	)
+
+    return json.Marshal(fileJSON)
+}
+
+func (c *Collection) UnmarshalJSON(b []byte) error {
+
+	if b == nil {
+		return errors.New("No bytes were input")
+	}
+
+	fileJSON := RowContainer{}
+	fileJSON.Rows = make([]Row, 0)
+
+	if err := json.Unmarshal(b, &fileJSON); err != nil {
+		return err
+	}
+
+	for i := range fileJSON.Rows {
+		obj, err := geojson.ObjectAuto(fileJSON.Rows[i].Obj)
+		if err != nil {
+			return err
+		}
+		c.ReplaceOrInsert(fileJSON.Rows[i].Id, obj, nil, fileJSON.Rows[i].FieldValues)
+	}
+
+    return nil
+}
+
 // Collection represents a collection of geojson objects.
 type Collection struct {
 	items    *btree.BTree // items sorted by keys
