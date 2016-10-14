@@ -55,7 +55,7 @@ type Row struct {
 	Values []float64 `json:"values"`
 }
 
-type File struct {
+type Portable struct {
 	Rows   []Row    `json:"rows"`
 	Fields []string `json:"fields"`
 }
@@ -63,7 +63,7 @@ type File struct {
 func (c *Collection) MarshalJSON() ([]byte, error) {
 
 	colCount := c.Count()
-	file := File{
+	portable := Portable{
 		Rows:   make([]Row, colCount),
 		Fields: c.FieldArr(),
 	}
@@ -75,7 +75,7 @@ func (c *Collection) MarshalJSON() ([]byte, error) {
 			if i < colCount {
 				objBytes, _ := obj.MarshalJSON()
 
-				file.Rows[i] = Row{
+				portable.Rows[i] = Row{
 					Id:     id,
 					Obj:    objBytes,
 					Values: values,
@@ -87,7 +87,7 @@ func (c *Collection) MarshalJSON() ([]byte, error) {
 		},
 	)
 
-	return json.Marshal(file)
+	return json.Marshal(portable)
 }
 
 func (c *Collection) UnmarshalJSON(b []byte) error {
@@ -96,19 +96,19 @@ func (c *Collection) UnmarshalJSON(b []byte) error {
 		return errors.New("No bytes were input")
 	}
 
-	file := File{}
-	file.Rows = make([]Row, 0)
+	portable := Portable{}
+	portable.Rows = make([]Row, 0)
 
-	if err := json.Unmarshal(b, &file); err != nil {
+	if err := json.Unmarshal(b, &portable); err != nil {
 		return err
 	}
 
-	for i := range file.Rows {
-		obj, err := geojson.ObjectAuto(file.Rows[i].Obj)
+	for i := range portable.Rows {
+		obj, err := geojson.ObjectAuto(portable.Rows[i].Obj)
 		if err != nil {
 			return err
 		}
-		c.ReplaceOrInsert(file.Rows[i].Id, obj, file.Fields, file.Rows[i].Values)
+		c.ReplaceOrInsert(portable.Rows[i].Id, obj, portable.Fields, portable.Rows[i].Values)
 	}
 
 	return nil
