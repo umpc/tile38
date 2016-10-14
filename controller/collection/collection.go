@@ -52,7 +52,7 @@ type Row struct {
 	Values []float64 `json:"values"`
 }
 
-type RowContainer struct {
+type File struct {
 	Rows   []Row    `json:"rows"`
 	Fields []string `json:"fields"`
 }
@@ -60,7 +60,7 @@ type RowContainer struct {
 func (c *Collection) MarshalJSON() ([]byte, error) {
 
 	colCount := c.Count()
-	fileJSON := RowContainer{
+	fileJSON := File{
 		Rows:   make([]Row, colCount),
 		Fields: c.FieldArr(),
 	}
@@ -84,7 +84,7 @@ func (c *Collection) MarshalJSON() ([]byte, error) {
 		},
 	)
 
-	return json.Marshal(fileJSON)
+    return json.Marshal(fileJSON)
 }
 
 func (c *Collection) UnmarshalJSON(b []byte) error {
@@ -93,7 +93,7 @@ func (c *Collection) UnmarshalJSON(b []byte) error {
 		return errors.New("No bytes were input")
 	}
 
-	fileJSON := RowContainer{}
+	fileJSON := File{}
 	fileJSON.Rows = make([]Row, 0)
 
 	if err := json.Unmarshal(b, &fileJSON); err != nil {
@@ -108,7 +108,7 @@ func (c *Collection) UnmarshalJSON(b []byte) error {
 		c.ReplaceOrInsert(fileJSON.Rows[i].Id, obj, fileJSON.Fields, fileJSON.Rows[i].Values)
 	}
 
-	return nil
+    return nil
 }
 
 // Collection represents a collection of geojson objects.
