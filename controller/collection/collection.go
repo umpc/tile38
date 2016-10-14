@@ -84,7 +84,7 @@ func (c *Collection) MarshalJSON() ([]byte, error) {
 		},
 	)
 
-    return json.Marshal(file)
+	return json.Marshal(file)
 }
 
 func (c *Collection) UnmarshalJSON(b []byte) error {
@@ -108,7 +108,7 @@ func (c *Collection) UnmarshalJSON(b []byte) error {
 		c.ReplaceOrInsert(file.Rows[i].Id, obj, file.Fields, file.Rows[i].Values)
 	}
 
-    return nil
+	return nil
 }
 
 // Collection represents a collection of geojson objects.
