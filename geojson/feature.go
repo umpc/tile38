@@ -9,9 +9,9 @@ import (
 
 // Feature is a geojson object with the type "Feature"
 type Feature struct {
-	Geometry Object
-	BBox     *BBox
-	idprops  string // raw id and properties seperated by a '\0'
+	Geometry   Object
+	BBox       *BBox
+	Properties string
 }
 
 func fillFeatureMap(json string) (Feature, []byte, error) {
@@ -35,23 +35,13 @@ func fillFeatureMap(json string) (Feature, []byte, error) {
 		return g, nil, err
 	}
 
-	var propsExists bool
 	props := gjson.Get(json, "properties")
 	switch props.Type {
 	default:
 		return g, nil, errInvalidPropertiesMember
 	case gjson.Null:
 	case gjson.JSON:
-		propsExists = true
-	}
-	id := gjson.Get(json, "id")
-	if id.Exists() || propsExists {
-		idRaw := stripWhitespace(id.Raw)
-		propsRaw := stripWhitespace(props.Raw)
-		raw := make([]byte, len(idRaw)+len(propsRaw)+1)
-		copy(raw, idRaw)
-		copy(raw[len(idRaw)+1:], propsRaw)
-		g.idprops = string(raw)
+		g.Properties = stripWhitespace(props.Raw)
 	}
 	return g, nil, err
 }
@@ -87,7 +77,7 @@ func (g Feature) PositionCount() int {
 // Weight returns the in-memory size of the object.
 func (g Feature) Weight() int {
 	res := g.PositionCount() * sizeofPosition
-	res += len(g.idprops)
+	res += len(g.Properties)
 	return res
 }
 
@@ -96,29 +86,15 @@ func (g Feature) MarshalJSON() ([]byte, error) {
 	return []byte(g.JSON()), nil
 }
 
-func (g Feature) getRaw() (id, props string) {
-	for i := 0; i < len(g.idprops); i++ {
-		if g.idprops[i] == 0 {
-			return g.idprops[:i], g.idprops[i+1:]
-		}
-	}
-	return "", ""
-}
-
 // JSON is the json representation of the object. This might not be exactly the same as the original.
 func (g Feature) JSON() string {
 	var buf bytes.Buffer
 	buf.WriteString(`{"type":"Feature","geometry":`)
 	buf.WriteString(g.Geometry.JSON())
 	g.BBox.write(&buf)
-	idRaw, propsRaw := g.getRaw()
-	if propsRaw != "" {
+	if g.Properties != "" {
 		buf.WriteString(`,"properties":`)
-		buf.WriteString(propsRaw)
-	}
-	if idRaw != "" {
-		buf.WriteString(`,"id":`)
-		buf.WriteString(idRaw)
+		buf.WriteString(g.Properties)
 	}
 	buf.WriteByte('}')
 	return buf.String()
